@@ -1,0 +1,1068 @@
+MACRO ASSEMBLER HEXAPODV3                                   05/13/12 20:42:37 PAGE     1
+
+
+WIN32 MACRO ASSEMBLER MA51 V06.04.13OBJECT MODULE PLACED IN D:\HEXAPOD\V4\HEXAPODV3.OBJ
+ASSEMBLER INVOKED BY: MA51.EXE D:\HEXAPOD\V4\HEXAPODV3.A51 OJ(D:\HEXAPOD\V4\HEXAPODV3.OBJ) PIN(C:\PROGRAMME\RIDE\INC;C:\PROGRAMME\RIDE\INC\51) PIN(C:\PROGRAMME\RIDE\INC\51\ATMEL\) EP LINES SYNTAX(ASM51) PR(D:\HEXAPOD\V4\HEXAPODV3.LST) XR DB PW(80) RB(0) 
+
+LOC     OBJ           LINE    SOURCE
+                         1     ;Benutzte Register: r3/r4/r5 für die Warteschleife am Anfang
+                         2     ;Im Interupt r1/r2 für 800 mikosekunden verzögerung 
+                         3     ;Im Interupt: a für Impulsbreitenmodulation (Akku wird vorher gerettet)
+                         4     ;im Interupt: r0/r1 für anpassung von istPos an sollPos
+                         5     ;r7 steuert die Geschwindigkeit 
+                         6     
+                         7     
+                         8     INCLUDE REG8252.INC 
+  0000                 131     ORG 0H 
+0000    02000F         132     JMP INIT
+  000B                 133     ORG 0BH
+000B    1204D8         134     CALL INTERUPT0  ;20msinterupt
+000E    32             135     RETI
+                       136     INIT: 
+000F    D2AF           137     SETB EA
+0011    D2A9           138     SETB ET0
+0013    758901         139     MOV TMOD, #1B ; Timer0im 16-Bit Modus
+0016    758CB1         140     MOV TH0, #0B1H     ;2^16 = 65536 - 20000 = 25536d --> B1E0h 
+0019    758AE0         141     MOV TL0, #0E0H
+001C    758000         142     MOV P0,#0H  ;alle LEDs aus
+001F    1204B3         143     CALL LEUCHTEROT
+0022    D28C           144     SETB TR0
+0024    12038E         145     CALL SETZEGRUNDPOSITION
+0027    1203DD         146     CALL SETZEISTPOSGLEICHSOLLPOS
+  00A0                 147     POSFLAG BIT P2.0           ; ist posFlag=0 so ist istPos != sollPos ... ist posFlag=1 so ist istPos=sollPos
+002A    C2A0           148     CLR POSFLAG
+002C    7F01           149     MOV R7,#1D       ;1: normale Geschwindigkeit 2: doppelteGeschwindigkeit, usw 3-4 dürfte maximaler wert sein
+                       150     HAUPTPROG: 
+002E    1204A6         151     CALL WAIT3S
+0031    7B05           152     MOV R3,#5D   ;5x Vorlaufen
+                       153     MARKE: 
+0033    12007A         154     CALL VORLAUFEN
+0036    DBFB           155     DJNZ R3,MARKE
+                       156     
+0038    7B10           157     MOV R3,#16D  ;16x Drehen
+                       158     MARKE2: 
+003A    1201EE         159     CALL LINKSDREHEN
+003D    DBFB           160     DJNZ R3,MARKE2
+                       161     
+003F    12038E         162     CALL SETZEGRUNDPOSITION
+0042    120414         163     CALL WARTENAUFPOS
+                       164     
+0045    7B05           165     MOV R3,#5D ; 5x zurücklaufn
+                       166     MARKE3: 
+0047    120108         167     CALL ZURUECKLAUFEN
+004A    DBFB           168     DJNZ R3,MARKE3
+                       169     
+004C    7B10           170     MOV R3,#16D
+                       171     MARKE4: 
+004E    120181         172     CALL RECHTSDREHEN
+0051    DBFB           173     DJNZ R3,MARKE4
+                       174     
+0053    1202F6         175     CALL TEST_1
+                       176     
+0056    7B0A           177     MOV R3,#10D    ;10 x test
+                       178     MARKE5: 
+0058    120351         179     CALL TEST_2
+005B    DBFB           180     DJNZ R3,MARKE5
+                       181     
+005D    12038E         182     CALL SETZEGRUNDPOSITION
+0060    120414         183     CALL WARTENAUFPOS
+                       184     
+0063    120264         185     CALL ABHOTTEN_1
+0066    7B0A           186     MOV R3,#10D
+                       187     MARKE6: 
+0068    1202DD         188     CALL ABHOTTEN_2
+006B    DBFB           189     DJNZ R3,MARKE6
+                       190     
+006D    EF             191     MOV A, R7
+006E    2401           192     ADD A,#1D
+0070    FF             193     MOV R7, A
+                       194     
+0071    C2AF           195     CLR EA
+0073    1204A6         196     CALL WAIT3S
+0076    D2AF           197     SETB EA
+0078    80B4           198     JMP HAUPTPROG
+                       199     
+                       200     
+                       201     VORLAUFEN: 
+007A    120444         202     CALL BEIN0RUNTER
+007D    12044B         203     CALL BEIN1RUNTER
+0080    120452         204     CALL BEIN2RUNTER
+0083    120459         205     CALL BEIN3RUNTER
+0086    120460         206     CALL BEIN4RUNTER
+0089    120467         207     CALL BEIN5RUNTER
+008C    1204BA         208     CALL LEUCHTEGRUEN
+008F    120414         209     CALL WARTENAUFPOS
+                       210     
+0092    12041A         211     CALL BEIN0HOCH
+0095    12042F         212     CALL BEIN3HOCH
+0098    120436         213     CALL BEIN4HOCH
+009B    12049E         214     CALL BEIN2GEGEN
+009E    1204B3         215     CALL LEUCHTEROT
+00A1    120414         216     CALL WARTENAUFPOS
+                       217     
+00A4    12048A         218     CALL BEIN1HINTER
+00A7    12049A         219     CALL BEIN5HINTER
+00AA    12048E         220     CALL BEIN2HINTER
+00AD    12046E         221     CALL BEIN0VOR
+00B0    12047A         222     CALL BEIN3VOR
+00B3    12047E         223     CALL BEIN4VOR
+00B6    1204C1         224     CALL LEUCHTEBLAU
+00B9    120414         225     CALL WARTENAUFPOS
+                       226     
+00BC    120444         227     CALL BEIN0RUNTER
+00BF    120459         228     CALL BEIN3RUNTER
+00C2    120460         229     CALL BEIN4RUNTER
+00C5    120452         230     CALL BEIN2RUNTER ;war vorher im gegendings und muss wieder in normale stellung
+00C8    1204C8         231     CALL LEUCHTEWEISS
+00CB    120414         232     CALL WARTENAUFPOS
+                       233     
+00CE    120421         234     CALL BEIN1HOCH
+00D1    120428         235     CALL BEIN2HOCH
+00D4    12043D         236     CALL BEIN5HOCH
+00D7    1204A2         237     CALL BEIN3GEGEN
+00DA    1204BA         238     CALL LEUCHTEGRUEN
+00DD    120414         239     CALL WARTENAUFPOS
+                       240     
+00E0    120486         241     CALL BEIN0HINTER
+00E3    120492         242     CALL BEIN3HINTER
+00E6    120496         243     CALL BEIN4HINTER
+00E9    120472         244     CALL BEIN1VOR
+00EC    120482         245     CALL BEIN5VOR
+00EF    120476         246     CALL BEIN2VOR
+00F2    1204B3         247     CALL LEUCHTEROT
+00F5    120414         248     CALL WARTENAUFPOS
+                       249     
+00F8    12044B         250     CALL BEIN1RUNTER
+00FB    120452         251     CALL BEIN2RUNTER
+00FE    120467         252     CALL BEIN5RUNTER
+0101    1204C1         253     CALL LEUCHTEBLAU
+0104    120414         254     CALL WARTENAUFPOS
+0107    22             255     RET
+                       256     
+                       257     ZURUECKLAUFEN: 
+0108    12041A         258     CALL BEIN0HOCH
+010B    12042F         259     CALL BEIN3HOCH
+010E    120436         260     CALL BEIN4HOCH
+0111    12049E         261     CALL BEIN2GEGEN
+0114    1204BA         262     CALL LEUCHTEGRUEN
+0117    120414         263     CALL WARTENAUFPOS
+                       264     
+011A    120472         265     CALL BEIN1VOR
+011D    120482         266     CALL BEIN5VOR
+0120    120476         267     CALL BEIN2VOR
+0123    120486         268     CALL BEIN0HINTER
+0126    120492         269     CALL BEIN3HINTER
+0129    120496         270     CALL BEIN4HINTER
+012C    1204B3         271     CALL LEUCHTEROT
+012F    120414         272     CALL WARTENAUFPOS
+                       273     
+0132    120444         274     CALL BEIN0RUNTER
+0135    120459         275     CALL BEIN3RUNTER
+0138    120460         276     CALL BEIN4RUNTER
+013B    120452         277     CALL BEIN2RUNTER ;war vorher im gegendings und muss wieder in normale stellung
+013E    1204C1         278     CALL LEUCHTEBLAU
+0141    120414         279     CALL WARTENAUFPOS
+                       280     
+0144    120421         281     CALL BEIN1HOCH
+0147    120428         282     CALL BEIN2HOCH
+014A    12043D         283     CALL BEIN5HOCH
+014D    1204A2         284     CALL BEIN3GEGEN
+0150    1204C8         285     CALL LEUCHTEWEISS
+0153    120414         286     CALL WARTENAUFPOS
+                       287     
+0156    12046E         288     CALL BEIN0VOR
+0159    12047A         289     CALL BEIN3VOR
+015C    12047E         290     CALL BEIN4VOR
+015F    12048A         291     CALL BEIN1HINTER
+0162    12049A         292     CALL BEIN5HINTER
+0165    12048E         293     CALL BEIN2HINTER
+0168    1204BA         294     CALL LEUCHTEGRUEN
+016B    120414         295     CALL WARTENAUFPOS
+                       296     
+016E    12044B         297     CALL BEIN1RUNTER
+0171    120452         298     CALL BEIN2RUNTER
+0174    120467         299     CALL BEIN5RUNTER
+0177    120459         300     CALL BEIN3RUNTER ; war vorher im gegendings und muss wieder in normale stellung
+017A    1204B3         301     CALL LEUCHTEROT
+017D    120414         302     CALL WARTENAUFPOS
+0180    22             303     RET
+                       304     
+                       305     
+                       306     
+                       307     RECHTSDREHEN: 
+                       308     
+0181    12044B         309     CALL BEIN1RUNTER
+0184    120452         310     CALL BEIN2RUNTER
+0187    120467         311     CALL BEIN5RUNTER
+018A    1204BA         312     CALL LEUCHTEGRUEN
+018D    120414         313     CALL WARTENAUFPOS
+                       314     
+                       315     
+0190    12041A         316     CALL BEIN0HOCH
+0193    12042F         317     CALL BEIN3HOCH
+0196    120436         318     CALL BEIN4HOCH
+0199    1204B3         319     CALL LEUCHTEROT
+019C    120414         320     CALL WARTENAUFPOS
+                       321     
+                       322     
+019F    120486         323     CALL BEIN0HINTER
+01A2    12048A         324     CALL BEIN1HINTER
+01A5    120476         325     CALL BEIN2VOR
+01A8    12047A         326     CALL BEIN3VOR
+01AB    120496         327     CALL BEIN4HINTER
+01AE    12049A         328     CALL BEIN5HINTER
+01B1    1204C1         329     CALL LEUCHTEBLAU
+01B4    120414         330     CALL WARTENAUFPOS
+                       331     
+01B7    120444         332     CALL BEIN0RUNTER
+01BA    120459         333     CALL BEIN3RUNTER
+01BD    120460         334     CALL BEIN4RUNTER
+01C0    1204C8         335     CALL LEUCHTEWEISS
+01C3    120414         336     CALL WARTENAUFPOS
+                       337     
+01C6    120421         338     CALL BEIN1HOCH
+01C9    120428         339     CALL BEIN2HOCH
+01CC    12043D         340     CALL BEIN5HOCH
+01CF    1204BA         341     CALL LEUCHTEGRUEN
+01D2    120414         342     CALL WARTENAUFPOS
+                       343     
+01D5    12046E         344     CALL BEIN0VOR
+01D8    120472         345     CALL BEIN1VOR
+01DB    12048E         346     CALL BEIN2HINTER
+01DE    120492         347     CALL BEIN3HINTER
+01E1    12047E         348     CALL BEIN4VOR
+01E4    120482         349     CALL BEIN5VOR
+01E7    1204B3         350     CALL LEUCHTEROT
+01EA    120414         351     CALL WARTENAUFPOS
+                       352     
+01ED    22             353     RET
+                       354     
+                       355     LINKSDREHEN: 
+01EE    120444         356     CALL BEIN0RUNTER
+01F1    12044B         357     CALL BEIN1RUNTER
+01F4    120452         358     CALL BEIN2RUNTER
+01F7    120459         359     CALL BEIN3RUNTER
+01FA    120460         360     CALL BEIN4RUNTER
+01FD    120467         361     CALL BEIN5RUNTER
+0200    1204C1         362     CALL LEUCHTEBLAU
+0203    120414         363     CALL WARTENAUFPOS
+                       364     
+                       365     
+0206    12041A         366     CALL BEIN0HOCH
+0209    12042F         367     CALL BEIN3HOCH
+020C    120436         368     CALL BEIN4HOCH
+020F    1204C8         369     CALL LEUCHTEWEISS
+0212    120414         370     CALL WARTENAUFPOS
+                       371     
+                       372     
+0215    12046E         373     CALL BEIN0VOR
+0218    120472         374     CALL BEIN1VOR
+021B    12048E         375     CALL BEIN2HINTER
+021E    120492         376     CALL BEIN3HINTER
+0221    12047E         377     CALL BEIN4VOR
+0224    120482         378     CALL BEIN5VOR
+0227    1204BA         379     CALL LEUCHTEGRUEN
+022A    120414         380     CALL WARTENAUFPOS
+                       381     
+022D    120444         382     CALL BEIN0RUNTER
+0230    120459         383     CALL BEIN3RUNTER
+0233    120460         384     CALL BEIN4RUNTER
+0236    1204B3         385     CALL LEUCHTEROT
+0239    120414         386     CALL WARTENAUFPOS
+                       387     
+023C    120421         388     CALL BEIN1HOCH
+023F    120428         389     CALL BEIN2HOCH
+0242    12043D         390     CALL BEIN5HOCH
+0245    1204C1         391     CALL LEUCHTEBLAU
+0248    120414         392     CALL WARTENAUFPOS
+                       393     
+024B    120486         394     CALL BEIN0HINTER
+024E    12048A         395     CALL BEIN1HINTER
+0251    120476         396     CALL BEIN2VOR
+0254    12047A         397     CALL BEIN3VOR
+0257    120496         398     CALL BEIN4HINTER
+025A    12049A         399     CALL BEIN5HINTER
+025D    1204C8         400     CALL LEUCHTEWEISS
+0260    120414         401     CALL WARTENAUFPOS
+                       402     
+0263    22             403     RET
+                       404     
+                       405     ABHOTTEN_1: 
+0264    120436         406     CALL BEIN4HOCH
+0267    12042F         407     CALL BEIN3HOCH
+026A    120414         408     CALL WARTENAUFPOS
+                       409     ;call Bein4hinter
+026D    752C82         410     MOV 2CH,#130D
+                       411     ;call Bein3vor
+0270    752955         412     MOV 29H,#85D   ;Bein4WeitVor
+0273    120414         413     CALL WARTENAUFPOS
+0276    120460         414     CALL BEIN4RUNTER
+0279    120459         415     CALL BEIN3RUNTER
+027C    1204C1         416     CALL LEUCHTEBLAU
+027F    120414         417     CALL WARTENAUFPOS
+                       418     
+0282    12043D         419     CALL BEIN5HOCH
+0285    120428         420     CALL BEIN2HOCH
+0288    120414         421     CALL WARTENAUFPOS
+028B    12049A         422     CALL BEIN5HINTER
+                       423     ;call Bein2vor
+028E    75266E         424     MOV 26H,#110D ;Bein2WeitVor
+0291    120414         425     CALL WARTENAUFPOS
+0294    120467         426     CALL BEIN5RUNTER
+0297    120452         427     CALL BEIN2RUNTER
+029A    1204BA         428     CALL LEUCHTEGRUEN
+029D    120414         429     CALL WARTENAUFPOS
+                       430     
+02A0    12041A         431     CALL BEIN0HOCH
+02A3    120421         432     CALL BEIN1HOCH
+02A6    752D91         433     MOV 2DH,#145D          ;Bein4bisschenHoch
+02A9    752E96         434     MOV 2EH,#150D          ;Bein4bisschenHoch
+02AC    75302D         435     MOV 30H,#45D           ;Bein5bisschenHoch
+02AF    753128         436     MOV 31H,#40D           ;Bein5bisschenHoch
+                       437     
+02B2    75276E         438     MOV 27H,#110D          ;Bein2bisschenRunter
+02B5    752878         439     MOV 28H,#120D          ;Bein2bisschenRunter
+02B8    752A50         440     MOV 2AH,#80D           ;Bein3bisschenRunter
+02BB    752B46         441     MOV 2BH,#70D           ;Bein3bisschenRunter
+02BE    1204C1         442     CALL LEUCHTEBLAU
+02C1    120414         443     CALL WARTENAUFPOS
+                       444     
+                       445     
+                       446     ;call Bein0vor
+02C4    752057         447     MOV 20H,#87D  ;Bein0Vor
+02C7    752178         448     MOV 21H,#120D ;Bein0AusStrecken
+02CA    75223C         449     MOV 22H,#60D ;Bein0AusStrecken
+                       450     
+                       451     ;call Bein1vor
+02CD    752364         452     MOV 23H,#100D ;Bein1Vor
+02D0    752441         453     MOV 24H,#65D  ;Bein1Ausstrecken
+02D3    752578         454     MOV 25H,#120D  ;Bein1AusStrecken
+02D6    1204BA         455     CALL LEUCHTEGRUEN
+02D9    120414         456     CALL WARTENAUFPOS
+02DC    22             457     RET
+                       458     
+                       459     ABHOTTEN_2: 
+                       460     
+02DD    75225A         461     MOV 22H,#90D
+02E0    752578         462     MOV 25H,#120D
+02E3    1204B3         463     CALL LEUCHTEROT
+02E6    120414         464     CALL WARTENAUFPOS
+                       465     
+02E9    75223C         466     MOV 22H,#60D
+02EC    75255A         467     MOV 25H,#90D
+02EF    1204C1         468     CALL LEUCHTEBLAU
+02F2    120414         469     CALL WARTENAUFPOS
+02F5    22             470     RET
+                       471     
+                       472     
+                       473     TEST_1: 
+                       474     
+02F6    12038E         475     CALL SETZEGRUNDPOSITION
+02F9    120414         476     CALL WARTENAUFPOS
+02FC    1204A6         477     CALL WAIT3S
+                       478     
+02FF    1204BA         479     CALL LEUCHTEGRUEN
+0302    120414         480     CALL WARTENAUFPOS
+                       481     
+0305    12041A         482     CALL BEIN0HOCH
+0308    12043D         483     CALL BEIN5HOCH
+030B    1204C1         484     CALL LEUCHTEBLAU
+030E    120414         485     CALL WARTENAUFPOS
+                       486     
+0311    12046E         487     CALL BEIN0VOR
+0314    12049A         488     CALL BEIN5HINTER
+0317    752F3C         489     MOV 2FH,#60D
+031A    1204B3         490     CALL LEUCHTEROT
+031D    120414         491     CALL WARTENAUFPOS
+                       492     
+0320    120444         493     CALL BEIN0RUNTER
+0323    120467         494     CALL BEIN5RUNTER
+0326    1204BA         495     CALL LEUCHTEGRUEN
+0329    120414         496     CALL WARTENAUFPOS
+                       497     
+032C    120421         498     CALL BEIN1HOCH
+032F    120436         499     CALL BEIN4HOCH
+0332    1204C1         500     CALL LEUCHTEBLAU
+0335    120414         501     CALL WARTENAUFPOS
+                       502     
+                       503     ;call Bein1vor
+0338    752341         504     MOV 23H,#65D
+033B    120496         505     CALL BEIN4HINTER
+033E    1204B3         506     CALL LEUCHTEROT
+0341    120414         507     CALL WARTENAUFPOS
+                       508     
+0344    12044B         509     CALL BEIN1RUNTER
+0347    120460         510     CALL BEIN4RUNTER
+034A    1204BA         511     CALL LEUCHTEGRUEN
+034D    120414         512     CALL WARTENAUFPOS
+0350    22             513     RET
+                       514     TEST_2: 
+0351    752D91         515     MOV 2DH,#145D          ;Bein4bisschenHoch   ;Hinten unten
+0354    752E94         516     MOV 2EH,#148D          ;Bein4bisschenHoch
+0357    75302D         517     MOV 30H,#45D           ;Bein5bisschenHoch
+035A    753121         518     MOV 31H,#33D           ;Bein5bisschenHoch
+                       519     
+035D    75216E         520     MOV 21H,#110D          ;Bein0BisschenRunter
+0360    75227D         521     MOV 22H,#125D
+0363    752450         522     MOV 24H,#80D       	   ;Bein1BisschenRunter
+0366    752541         523     MOV 25H,#65D
+0369    1204C1         524     CALL LEUCHTEBLAU
+036C    120414         525     CALL WARTENAUFPOS
+                       526     
+                       527     
+036F    752191         528     MOV 21H,#145D          ;Bein0BisschenHoch  ;HintenOben
+0372    752291         529     MOV 22H,#145D
+0375    75242D         530     MOV 24H,#45D           ;Bein1BisschenHoch
+0378    752523         531     MOV 25H,#35D
+                       532     
+037B    752D6E         533     MOV 2DH,#110D			;Bein4Runter
+037E    752E82         534     MOV 2EH,#130D
+0381    753050         535     MOV 30H,#80D            ;Bein5Runter
+0384    753139         536     MOV 31H,#57D
+0387    1204B3         537     CALL LEUCHTEROT
+038A    120414         538     CALL WARTENAUFPOS
+038D    22             539     RET
+                       540     
+                       541     
+                       542     
+                       543     
+                       544     
+                       545     SETZEGRUNDPOSITION: 
+038E    1203A1         546     CALL BEIN0START
+0391    1203AB         547     CALL BEIN1START
+0394    1203B5         548     CALL BEIN2START
+0397    1203BF         549     CALL BEIN3START
+039A    1203C9         550     CALL BEIN4START
+039D    1203D3         551     CALL BEIN5START
+03A0    22             552     RET
+                       553     
+                       554     BEIN0START: 
+03A1    75207D         555     MOV 20H, #125D    ;Startposition Servo0   v:110t  
+03A4    752182         556     MOV 21H, #130D    ;Startposition Servo1   v:110t 
+03A7    752296         557     MOV 22H, #150D    ;Startposition Servo2  v:125k
+03AA    22             558     RET
+                       559     
+                       560     BEIN1START: 
+03AB    75232D         561     MOV 23H, #45D    ;Startposition Servo3   k
+03AE    75243C         562     MOV 24H, #60D    ;Startposition Servo4   k
+03B1    752528         563     MOV 25H, #40D    ;Startposition Servo5   k
+03B4    22             564     RET
+                       565     
+                       566     BEIN2START: 
+03B5    75267F         567     MOV 26H, #127D    ;Startposition Servo6   t
+03B8    752782         568     MOV 27H, #130D    ;Startposition Servo7   t
+03BB    752896         569     MOV 28H, #150D    ;Startposition Servo8  k
+03BE    22             570     RET
+                       571     
+                       572     
+                       573     BEIN3START: 
+03BF    75293F         574     MOV 29H, #63D    ;Startposition Servo9   k
+03C2    752A3C         575     MOV 2AH, #60D    ;Startposition Servo10  k
+03C5    752B28         576     MOV 2BH, #40D    ;Startposition Servo11  k
+03C8    22             577     RET
+                       578     
+                       579     
+                       580     BEIN4START: 
+03C9    752C7D         581     MOV 2CH, #125D    ;Startposition Servo12  t
+03CC    752D82         582     MOV 2DH, #130D    ;Startposition Servo13  t
+03CF    752E96         583     MOV 2EH, #150D    ;Startposition Servo14 k
+03D2    22             584     RET
+                       585     
+                       586     
+                       587     BEIN5START: 
+03D3    752F3C         588     MOV 2FH, #60D    ;Startposition Servo15  k
+03D6    75303C         589     MOV 30H, #60D    ;Startposition Servo16  k
+03D9    753128         590     MOV 31H, #40D    ;Startposition Servo17  k
+03DC    22             591     RET
+                       592     
+                       593     
+                       594     
+                       595     
+                       596     
+                       597     
+                       598     SETZEISTPOSGLEICHSOLLPOS: 
+03DD    852040         599     MOV 40H, 20H
+03E0    852141         600     MOV 41H, 21H
+03E3    852242         601     MOV 42H, 22H
+03E6    852343         602     MOV 43H, 23H
+03E9    852444         603     MOV 44H, 24H
+03EC    852545         604     MOV 45H, 25H
+03EF    852646         605     MOV 46H, 26H
+03F2    852747         606     MOV 47H, 27H
+03F5    852848         607     MOV 48H, 28H
+03F8    852949         608     MOV 49H, 29H
+03FB    852A4A         609     MOV 4AH, 2AH
+03FE    852B4B         610     MOV 4BH, 2BH
+0401    852C4C         611     MOV 4CH, 2CH
+0404    852D4D         612     MOV 4DH, 2DH
+0407    852E4E         613     MOV 4EH, 2EH
+040A    852F4F         614     MOV 4FH, 2FH
+040D    853050         615     MOV 50H, 30H
+0410    853151         616     MOV 51H, 31H
+0413    22             617     RET
+                       618     
+                       619     WARTENAUFPOS: 
+0414    C2A0           620     CLR POSFLAG
+                       621     WARTENAUFPOSFLAGMARKE: 
+0416    30A0FD         622     JNB POSFLAG,WARTENAUFPOSFLAGMARKE
+0419    22             623     RET
+                       624     
+                       625     BEIN0HOCH: 
+041A    752196         626     MOV 21H, #150D ;Bein0
+041D    752287         627     MOV 22H, #135D 
+0420    22             628     RET
+                       629     
+                       630     BEIN1HOCH: 
+0421    752423         631     MOV 24H, #35D    ;Bein1
+0424    752532         632     MOV 25H, #50D
+0427    22             633     RET
+                       634     
+                       635     BEIN2HOCH: 
+0428    752796         636     MOV 27H, #150D    ;Bein2
+042B    752887         637     MOV 28H, #135D
+042E    22             638     RET
+                       639     
+                       640     BEIN3HOCH: 
+042F    752A28         641     MOV 2AH, #40D  ;Bein3
+0432    752B32         642     MOV 2BH, #50D
+0435    22             643     RET
+                       644     
+                       645     BEIN4HOCH: 
+0436    752D96         646     MOV 2DH, #150D ;Bein4
+0439    752E87         647     MOV 2EH, #135D 
+043C    22             648     RET
+                       649     
+                       650     
+                       651     BEIN5HOCH: 
+043D    753023         652     MOV 30H, #35D    ;Bein5
+0440    753132         653     MOV 31H, #50D
+0443    22             654     RET
+                       655     
+                       656     BEIN0RUNTER: 
+0444    752182         657     MOV 21H, #130D    ;Bein0
+0447    752296         658     MOV 22H, #150D 
+044A    22             659     RET
+                       660     
+                       661     BEIN1RUNTER: 
+044B    75243C         662     MOV 24H, #60D    ;Bein1
+044E    752528         663     MOV 25H, #40D
+0451    22             664     RET
+                       665     
+                       666     BEIN2RUNTER: 
+0452    752782         667     MOV 27H, #130D    ;Bein2
+0455    752896         668     MOV 28H, #150D
+0458    22             669     RET
+                       670     
+                       671     BEIN3RUNTER: 
+0459    752A3C         672     MOV 2AH, #60D    ;Bein3
+045C    752B28         673     MOV 2BH, #40D  
+045F    22             674     RET
+                       675     
+                       676     BEIN4RUNTER: 
+0460    752D82         677     MOV 2DH, #130D    ;Bein4
+0463    752E96         678     MOV 2EH, #150D  
+0466    22             679     RET
+                       680     
+                       681     BEIN5RUNTER: 
+0467    75303C         682     MOV 30H, #60D    ;Bein5
+046A    753128         683     MOV 31H, #40D
+                       684     
+046D    22             685     RET
+                       686     
+                       687     BEIN0VOR: 
+046E    752078         688     MOV 20H,#120D ;Bein0
+0471    22             689     RET
+                       690     
+                       691     BEIN1VOR: 
+0472    75233C         692     MOV 23H,#60D ;Bein1
+0475    22             693     RET
+                       694     
+                       695     BEIN2VOR: 
+0476    75267D         696     MOV 26H,#125D ;Bein2
+0479    22             697     RET
+                       698     
+                       699     BEIN3VOR: 
+047A    75293C         700     MOV 29H,#60D ;Bein3    
+047D    22             701     RET
+                       702     
+                       703     BEIN4VOR: 
+047E    752C73         704     MOV 2CH,#115D ;Bein4
+0481    22             705     RET
+                       706     
+                       707     
+                       708     BEIN5VOR: 
+0482    752F46         709     MOV 2FH,#70D ;Bein5
+0485    22             710     RET
+                       711     
+                       712     BEIN0HINTER: 
+0486    752091         713     MOV 20H, #145D ;Bein0
+0489    22             714     RET
+                       715     
+                       716     BEIN1HINTER: 
+048A    752323         717     MOV 23H,#35D ;Bein1
+048D    22             718     RET
+                       719     
+                       720     BEIN2HINTER: 
+048E    752687         721     MOV 26H,#135D ;Bein2
+0491    22             722     RET
+                       723     
+                       724     BEIN3HINTER: 
+0492    752932         725     MOV 29H, #50D  ;Bein3
+0495    22             726     RET
+                       727     
+                       728     BEIN4HINTER: 
+0496    752C7D         729     MOV 2CH, #125D ;Bein4
+0499    22             730     RET
+                       731     
+                       732     BEIN5HINTER: 
+049A    752F37         733     MOV 2FH,#55D ;Bein5
+049D    22             734     RET
+                       735     
+                       736     BEIN2GEGEN: 
+049E    75277D         737     MOV 27H, #125D  ;bein2
+04A1    22             738     RET
+                       739     
+                       740     BEIN3GEGEN: 
+04A2    752A41         741     MOV 2AH, #65D    ;Bein3
+04A5    22             742     RET
+                       743     
+                       744     
+                       745     
+                       746     WAIT3S: 
+04A6    7B0A           747     MOV R3,#10D
+                       748     WAITMARKE0: 
+04A8    7CC8           749     MOV R4, #200D
+                       750     WAITMARKE1: 
+04AA    7DFA           751     MOV R5,#250D
+                       752     WAITMARKE2: 
+04AC    DDFE           753     DJNZ R5, WAITMARKE2
+04AE    DCFA           754     DJNZ R4, WAITMARKE1
+04B0    DBF6           755     DJNZ R3, WAITMARKE0
+04B2    22             756     RET
+                       757     
+                       758     
+                       759     LEUCHTEROT: 
+04B3    D2B0           760     SETB P3.0   ;blau aus
+04B5    D2B1           761     SETB P3.1   ;grün aus
+04B7    C290           762     CLR  P1.0    ;rot an
+04B9    22             763     RET
+                       764     
+                       765     LEUCHTEGRUEN: 
+04BA    D2B0           766     SETB P3.0    ;blau aus
+04BC    C2B1           767     CLR  P3.1     ;grün an
+04BE    D290           768     SETB P1.0    ;rot aus
+04C0    22             769     RET
+                       770     
+                       771     LEUCHTEBLAU: 
+04C1    C2B0           772     CLR  P3.0    ;blau an
+04C3    D2B1           773     SETB P3.1   ;grün aus
+04C5    D290           774     SETB P1.0   ;rot aus
+04C7    22             775     RET
+                       776     
+                       777     LEUCHTEWEISS: 
+04C8    C2B0           778     CLR  P3.0    ;blau an
+04CA    C2B1           779     CLR P3.1   ;grün an
+04CC    C290           780     CLR P1.0   ;rot an
+                       781     
+04CE    22             782     RET
+                       783     
+                       784     
+                       785     PAUSE800MIKROSEKUNDEN:  ;Ist mit absicht nicht 800 mikrosekunden lang, da bei 800 die servos noch nicht am anschlag waren!
+04CF    7902           786     MOV R1, #2D
+                       787     P800AUSSEN: 
+04D1    7AAF           788     MOV R2, #175D
+                       789     P800INNEN: 
+04D3    DAFE           790     DJNZ R2, P800INNEN           ;2MZ x 200 x 2 = 800 mikroSek
+04D5    D9FA           791     DJNZ R1, P800AUSSEN
+04D7    22             792     RET
+                       793     
+                       794     
+                       795     INTERUPT0: 
+04D8    C28C           796     CLR TR0
+04DA    C0E0           797     PUSH 0E0H ;Akku retten
+04DC    758CB1         798     MOV TH0, #0B1H     ;2^16 = 65536 - 20000 = 25536d --> B1E0h 
+04DF    758AE0         799     MOV TL0, #0E0H
+04E2    D28C           800     SETB TR0
+04E4    7496           801     MOV A, #150D ;register zum runterzählen
+                       802     ;mov P1, #255d ;Servo0-Servo5 pin an   
+04E6    4390FC         803     ORL P1,#11111100B    
+04E9    91CF           804     CALL PAUSE800MIKROSEKUNDEN 
+                       805     LOOP0: 
+04EB    B54002         806     CJNE A, 40H, WEITER0    ;Servo0
+04EE    C292           807     CLR P1.2                 
+                       808     WEITER0: 
+04F0    B54102         809     CJNE A, 41H, WEITER1    ;
+04F3    C293           810     CLR P1.3
+                       811     WEITER1: 
+04F5    B54202         812     CJNE A, 42H, WEITER2
+04F8    C294           813     CLR P1.4
+                       814     WEITER2: 
+04FA    B54302         815     CJNE A, 43H, WEITER3
+04FD    C295           816     CLR P1.5
+                       817     WEITER3: 
+04FF    B54402         818     CJNE A, 44H, WEITER4
+0502    C296           819     CLR P1.6
+                       820     WEITER4: 
+0504    B54502         821     CJNE A, 45H, WEITER5
+0507    C297           822     CLR P1.7
+                       823     WEITER5: 
+0509    14             824     DEC A
+050A    70DF           825     JNZ LOOP0    
+                       826     ;mov P1,#0d
+050C    539003         827     ANL P1,#00000011B
+050F    7496           828     MOV A, #150D
+                       829     ;mov P2, #255d  ;Servo6-Servo11 an
+0511    43A0FC         830     ORL P2,#11111100B  
+0514    91CF           831     CALL PAUSE800MIKROSEKUNDEN
+                       832     LOOP1: 
+0516    B54602         833     CJNE A, 46H, WEITER6
+0519    C2A2           834     CLR P2.2
+                       835     WEITER6: 
+051B    B54702         836     CJNE A, 47H, WEITER7
+051E    C2A3           837     CLR P2.3
+                       838     WEITER7: 
+0520    B54802         839     CJNE A, 48H, WEITER8
+0523    C2A4           840     CLR P2.4
+                       841     WEITER8: 
+0525    B54902         842     CJNE A, 49H, WEITER9
+0528    C2A5           843     CLR P2.5
+                       844     WEITER9: 
+052A    B54A02         845     CJNE A, 4AH, WEITER10
+052D    C2A6           846     CLR P2.6
+                       847     WEITER10: 
+052F    B54B02         848     CJNE A, 4BH, WEITER11
+0532    C2A7           849     CLR P2.7
+                       850     WEITER11: 
+0534    14             851     DEC A
+0535    70DF           852     JNZ LOOP1
+                       853     ;mov P2,#0d
+0537    53A003         854     ANL P2,#00000011B
+053A    7496           855     MOV A, #150D
+                       856     ;mov P3, #255d
+053C    43B0FC         857     ORL P3,#11111100B  
+053F    91CF           858     CALL PAUSE800MIKROSEKUNDEN
+                       859     LOOP2: 
+0541    B54C02         860     CJNE A, 4CH, WEITER12
+0544    C2B2           861     CLR P3.2
+                       862     WEITER12: 
+0546    B54D02         863     CJNE A, 4DH, WEITER13
+0549    C2B3           864     CLR P3.3
+                       865     WEITER13: 
+054B    B54E02         866     CJNE A, 4EH, WEITER14
+054E    C2B4           867     CLR P3.4
+                       868     WEITER14: 
+0550    B54F02         869     CJNE A, 4FH, WEITER15
+0553    C2B5           870     CLR P3.5
+                       871     WEITER15: 
+0555    B55002         872     CJNE A, 50H, WEITER16
+0558    C2B6           873     CLR P3.6
+                       874     WEITER16: 
+055A    B55102         875     CJNE A, 51H, WEITER17
+055D    C2B7           876     CLR P3.7
+                       877     WEITER17:                  
+055F    14             878     DEC A
+0560    70DF           879     JNZ LOOP2 
+                       880     ;mov P3,#0d
+0562    53B003         881     ANL P3,#00000011B
+                       882     
+                       883     
+0565    D2A0           884     SETB POSFLAG
+                       885     
+                       886     ; das hier wird nur ausgeführt, wenn r6=0
+0567    C007           887     PUSH 07H ;r7 auf Stack legen
+                       888     MARKE2Z: 
+0569    120573         889     CALL ISTPOSSOLLPOSANPASSEN
+056C    DFFB           890     DJNZ R7,MARKE2Z
+056E    D007           891     POP 07H ;r7 zurückholen 
+                       892     
+                       893     
+                       894     
+0570    D0E0           895     POP 0E0H ;Akku zurückholen
+0572    22             896     RET 
+                       897     
+                       898     ISTPOSSOLLPOSANPASSEN: 
+0573    7820           899     MOV R0, #20H   
+0575    7940           900     MOV R1, #40H
+                       901     MARKEZ: 
+0577    E7             902     MOV A, @R1    ;istPos in akku
+0578    C3             903     CLR C
+0579    96             904     SUBB A,@R0    ; istPos - sollPos
+057A    600D           905     JZ NEXT0
+057C    C2A0           906     CLR POSFLAG
+057E    4006           907     JC NEGATIV0
+0580    E7             908     MOV A,@R1
+0581    14             909     DEC A
+0582    F7             910     MOV @R1, A ;neue istPos von akku in @r0
+0583    020589         911     JMP NEXT0
+                       912     NEGATIV0: 
+0586    E7             913     MOV A,@R1
+0587    04             914     INC A
+0588    F7             915     MOV @R1, A 
+                       916     NEXT0: 
+0589    08             917     INC R0
+058A    09             918     INC R1
+058B    B832E9         919     CJNE R0,#32H,MARKEZ
+                       920     
+058E    22             921     RET
+                       922     
+                       923     END
+MACRO ASSEMBLER HEXAPODV3                                   05/13/12 20:42:37 PAGE     0
+
+
+SYMBOL TABLE LISTING
+------ ----- -------
+
+
+N A M E             T Y P E  V A L U E   ATTRIBUTES             REFERENCES
+
+WEITER0. . . . . .  C ADDR   04F0H   A                          806 808# 
+P800INNEN. . . . .  C ADDR   04D3H   A                          789# 790 
+BEIN4START . . . .  C ADDR   03C9H   A                          550 580# 
+SETZEGRUNDPOSITION  C ADDR   038EH   A                          145 162 182 475 545# 
+                                                                
+RCAP2H . . . . . .  D ADDR   00CBH   A                          41# 
+DPL. . . . . . . .  D ADDR   0082H   A                          23# 
+P0 . . . . . . . .  D ADDR   0080H   A                          15# 142 
+WEITER1. . . . . .  C ADDR   04F5H   A                          809 811# 
+BEIN5START . . . .  C ADDR   03D3H   A                          551 587# 
+SCK. . . . . . . .  B ADDR   0090H.7 A                          120# 
+P1 . . . . . . . .  D ADDR   0090H   A                          16# 762 768 774 780 
+                                                                803 807 810 813 816 
+                                                                819 822 827 
+WEITER2. . . . . .  C ADDR   04FAH   A                          812 814# 
+MARKE2 . . . . . .  C ADDR   003AH   A                          158# 160 
+EXEN2. . . . . . .  B ADDR   00C8H.3 A                          128# 
+CP_RL2 . . . . . .  B ADDR   00C8H.0 A                          116# 
+B. . . . . . . . .  D ADDR   00F0H   A                          21# 
+P2 . . . . . . . .  D ADDR   00A0H   A                          17# 147 830 834 837 
+                                                                840 843 846 849 854 
+                                                                
+WEITER3. . . . . .  C ADDR   04FFH   A                          815 817# 
+MARKE3 . . . . . .  C ADDR   0047H   A                          166# 168 
+T2EX . . . . . . .  B ADDR   0090H.1 A                          110# 
+PS . . . . . . . .  B ADDR   00B8H.4 A                          80# 
+SP . . . . . . . .  D ADDR   0081H   A                          22# 
+P3 . . . . . . . .  D ADDR   00B0H   A                          18# 760 761 766 767 
+                                                                772 773 778 779 857 
+                                                                861 864 867 870 873 
+                                                                876 881 
+WEITER4. . . . . .  C ADDR   0504H   A                          818 820# 
+MARKE4 . . . . . .  C ADDR   004EH   A                          171# 173 
+ZURUECKLAUFEN. . .  C ADDR   0108H   A                          167 257# 
+T0 . . . . . . . .  B ADDR   00B0H.4 A                          89# 
+AC . . . . . . . .  B ADDR   00D0H.6 A                          57# 
+WMCON. . . . . . .  D ADDR   0096H   A                          47# 
+RCAP2L . . . . . .  D ADDR   00CAH   A                          40# 
+WEITER5. . . . . .  C ADDR   0509H   A                          821 823# 
+BEIN0VOR . . . . .  C ADDR   046EH   A                          221 288 344 373 487 
+                                                                687# 
+ABHOTTEN_1 . . . .  C ADDR   0264H   A                          185 405# 
+MARKE5 . . . . . .  C ADDR   0058H   A                          178# 180 
+SETZEISTPOSGLEICH~  C ADDR   03DDH   A                          146 598# 
+REN. . . . . . . .  B ADDR   0098H.4 A                          98# 
+T1 . . . . . . . .  B ADDR   00B0H.5 A                          88# 
+OV . . . . . . . .  B ADDR   00D0H.2 A                          61# 
+WEITER6. . . . . .  C ADDR   051BH   A                          833 835# 
+BEIN1VOR . . . . .  C ADDR   0472H   A                          244 265 345 374 691# 
+                                                                
+ABHOTTEN_2 . . . .  C ADDR   02DDH   A                          188 459# 
+MARKE6 . . . . . .  C ADDR   0068H   A                          187# 189 
+SS . . . . . . . .  B ADDR   0090H.4 A                          123# 
+T2 . . . . . . . .  B ADDR   0090H.0 A                          111# 
+EA . . . . . . . .  B ADDR   00A8H.7 A                          73# 137 195 197 
+T2CON. . . . . . .  D ADDR   00C8H   A                          39# 
+ISTPOSSOLLPOSANPA~  C ADDR   0573H   A                          889 898# 
+WEITER7. . . . . .  C ADDR   0520H   A                          836 838# 
+BEIN2VOR . . . . .  C ADDR   0476H   A                          246 267 325 396 695# 
+                                                                
+ACC. . . . . . . .  D ADDR   00E0H   A                          20# 
+WEITER8. . . . . .  C ADDR   0525H   A                          839 841# 
+BEIN3VOR . . . . .  C ADDR   047AH   A                          222 289 326 397 699# 
+                                                                
+C_T2 . . . . . . .  B ADDR   00C8H.1 A                          115# 
+SPSR . . . . . . .  D ADDR   00AAH   A                          46# 
+WEITER9. . . . . .  C ADDR   052AH   A                          842 844# 
+WARTENAUFPOSFLAGM~  C ADDR   0416H   A                          621# 622 
+BEIN4VOR . . . . .  C ADDR   047EH   A                          223 290 348 377 703# 
+                                                                
+WR . . . . . . . .  B ADDR   00B0H.6 A                          87# 
+ET0. . . . . . . .  B ADDR   00A8H.1 A                          77# 138 
+MARKEZ . . . . . .  C ADDR   0577H   A                          901# 919 
+LOOP0. . . . . . .  C ADDR   04EBH   A                          805# 825 
+BEIN5VOR . . . . .  C ADDR   0482H   A                          245 266 349 378 708# 
+                                                                
+ET1. . . . . . . .  B ADDR   00A8H.3 A                          75# 
+TF0. . . . . . . .  B ADDR   0088H.5 A                          66# 
+LOOP1. . . . . . .  C ADDR   0516H   A                          832# 852 
+LEUCHTEGRUEN . . .  C ADDR   04BAH   A                          208 238 262 294 312 
+                                                                341 379 428 455 479 
+                                                                495 511 765# 
+INTERUPT0. . . . .  C ADDR   04D8H   A                          134 795# 
+ET2. . . . . . . .  B ADDR   00A8H.5 A                          106# 
+TF1. . . . . . . .  B ADDR   0088H.7 A                          64# 
+LOOP2. . . . . . .  C ADDR   0541H   A                          859# 879 
+POSFLAG. . . . . .  B ADDR   00A0H.0 A                          147# 148 620 622 
+                                                                884 906 
+RCLK . . . . . . .  B ADDR   00C8H.5 A                          126# 
+TF2. . . . . . . .  B ADDR   00C8H.7 A                          113# 
+RB8. . . . . . . .  B ADDR   0098H.2 A                          100# 
+TH0. . . . . . . .  D ADDR   008CH   A                          30# 140 798 
+EX0. . . . . . . .  B ADDR   00A8H.0 A                          78# 
+IT0. . . . . . . .  B ADDR   0088H.0 A                          71# 
+DP1H . . . . . . .  D ADDR   0085H   A                          50# 
+TH1. . . . . . . .  D ADDR   008DH   A                          31# 
+LEUCHTEBLAU. . . .  C ADDR   04C1H   A                          224 253 278 329 362 
+                                                                391 416 442 468 484 
+                                                                500 524 771# 
+BEIN0RUNTER. . . .  C ADDR   0444H   A                          202 227 274 332 356 
+                                                                382 493 656# 
+TCLK . . . . . . .  B ADDR   00C8H.4 A                          127# 
+TB8. . . . . . . .  B ADDR   0098H.3 A                          99# 
+RXD. . . . . . . .  B ADDR   00B0H.0 A                          93# 
+EX1. . . . . . . .  B ADDR   00A8H.2 A                          76# 
+IT1. . . . . . . .  B ADDR   0088H.2 A                          69# 
+TH2. . . . . . . .  D ADDR   00CDH   A                          43# 
+IE . . . . . . . .  D ADDR   00A8H   A                          32# 
+NEXT0. . . . . . .  C ADDR   0589H   A                          905 911 916# 
+BEIN1RUNTER. . . .  C ADDR   044BH   A                          203 250 297 309 357 
+                                                                509 661# 
+BEIN0HOCH. . . . .  C ADDR   041AH   A                          211 258 316 366 431 
+                                                                482 625# 
+BEIN2RUNTER. . . .  C ADDR   0452H   A                          204 230 251 277 298 
+                                                                310 358 427 666# 
+                                                                
+TEST_1 . . . . . .  C ADDR   02F6H   A                          175 473# 
+MARKE. . . . . . .  C ADDR   0033H   A                          153# 155 
+SM0. . . . . . . .  B ADDR   0098H.7 A                          95# 
+TXD. . . . . . . .  B ADDR   00B0H.1 A                          92# 
+P. . . . . . . . .  B ADDR   00D0H.0 A                          62# 
+SBUF . . . . . . .  D ADDR   0099H   A                          35# 
+TL0. . . . . . . .  D ADDR   008AH   A                          28# 141 799 
+PCON . . . . . . .  D ADDR   0087H   A                          25# 
+WEITER10 . . . . .  C ADDR   052FH   A                          845 847# 
+BEIN1HOCH. . . . .  C ADDR   0421H   A                          234 281 338 388 432 
+                                                                498 630# 
+BEIN3RUNTER. . . .  C ADDR   0459H   A                          205 228 275 300 333 
+                                                                359 383 415 671# 
+                                                                
+TEST_2 . . . . . .  C ADDR   0351H   A                          179 514# 
+SM1. . . . . . . .  B ADDR   0098H.6 A                          96# 
+DP1L . . . . . . .  D ADDR   0084H   A                          49# 
+TL1. . . . . . . .  D ADDR   008BH   A                          29# 
+WEITER11 . . . . .  C ADDR   0534H   A                          848 850# 
+BEIN2HOCH. . . . .  C ADDR   0428H   A                          235 282 339 389 420 
+                                                                635# 
+BEIN4RUNTER. . . .  C ADDR   0460H   A                          206 229 276 334 360 
+                                                                384 414 510 676# 
+                                                                
+VORLAUFEN. . . . .  C ADDR   007AH   A                          154 201# 
+FL . . . . . . . .  B ADDR   00D0H.1 A                          130# 
+SM2. . . . . . . .  B ADDR   0098H.5 A                          97# 
+TL2. . . . . . . .  D ADDR   00CCH   A                          42# 
+WEITER12 . . . . .  C ADDR   0546H   A                          860 862# 
+BEIN3HOCH. . . . .  C ADDR   042FH   A                          212 259 317 367 407 
+                                                                640# 
+BEIN5RUNTER. . . .  C ADDR   0467H   A                          207 252 299 311 361 
+                                                                426 494 681# 
+SCON . . . . . . .  D ADDR   0098H   A                          34# 
+WEITER13 . . . . .  C ADDR   054BH   A                          863 865# 
+BEIN4HOCH. . . . .  C ADDR   0436H   A                          213 260 318 368 406 
+                                                                499 645# 
+INIT . . . . . . .  C ADDR   000FH   A                          132 136# 
+PT0. . . . . . . .  B ADDR   00B8H.1 A                          83# 
+TMOD . . . . . . .  D ADDR   0089H   A                          27# 139 
+TCON . . . . . . .  D ADDR   0088H   A                          26# 
+WEITER14 . . . . .  C ADDR   0550H   A                          866 868# 
+PAUSE800MIKROSEKU~  C ADDR   04CFH   A                          785# 804 831 858 
+                                                                
+WAITMARKE0 . . . .  C ADDR   04A8H   A                          748# 755 
+BEIN5HOCH. . . . .  C ADDR   043DH   A                          236 283 340 390 419 
+                                                                483 651# 
+LEUCHTEWEISS . . .  C ADDR   04C8H   A                          231 285 335 369 400 
+                                                                777# 
+EXF2 . . . . . . .  B ADDR   00C8H.6 A                          125# 
+PT1. . . . . . . .  B ADDR   00B8H.3 A                          81# 
+RS0. . . . . . . .  B ADDR   00D0H.3 A                          60# 
+WEITER15 . . . . .  C ADDR   0555H   A                          869 871# 
+WAITMARKE1 . . . .  C ADDR   04AAH   A                          750# 754 
+BEIN2GEGEN . . . .  C ADDR   049EH   A                          214 261 736# 
+PT2. . . . . . . .  B ADDR   00B8H.5 A                          108# 
+RD . . . . . . . .  B ADDR   00B0H.7 A                          86# 
+TR0. . . . . . . .  B ADDR   0088H.4 A                          67# 144 796 800 
+RS1. . . . . . . .  B ADDR   00D0H.4 A                          59# 
+F0 . . . . . . . .  B ADDR   00D0H.5 A                          58# 
+WEITER16 . . . . .  C ADDR   055AH   A                          872 874# 
+P800AUSSEN . . . .  C ADDR   04D1H   A                          787# 791 
+WAITMARKE2 . . . .  C ADDR   04ACH   A                          752# 753 
+BEIN3GEGEN . . . .  C ADDR   04A2H   A                          237 284 740# 
+LINKSDREHEN. . . .  C ADDR   01EEH   A                          159 355# 
+TR1. . . . . . . .  B ADDR   0088H.6 A                          65# 
+WEITER17 . . . . .  C ADDR   055FH   A                          875 877# 
+BEIN0HINTER. . . .  C ADDR   0486H   A                          241 268 323 394 712# 
+                                                                
+MOSI . . . . . . .  B ADDR   0090H.5 A                          122# 
+MISO . . . . . . .  B ADDR   0090H.6 A                          121# 
+TR2. . . . . . . .  B ADDR   00C8H.2 A                          114# 
+PX0. . . . . . . .  B ADDR   00B8H.0 A                          84# 
+ES . . . . . . . .  B ADDR   00A8H.4 A                          74# 
+SPCR . . . . . . .  D ADDR   00D5H   A                          48# 
+BEIN1HINTER. . . .  C ADDR   048AH   A                          218 291 324 395 716# 
+                                                                
+PX1. . . . . . . .  B ADDR   00B8H.2 A                          82# 
+SPDR . . . . . . .  D ADDR   0086H   A                          51# 
+IP . . . . . . . .  D ADDR   00B8H   A                          33# 
+BEIN2HINTER. . . .  C ADDR   048EH   A                          220 293 346 375 720# 
+                                                                
+HAUPTPROG. . . . .  C ADDR   002EH   A                          150# 198 
+PSW. . . . . . . .  D ADDR   00D0H   A                          19# 
+BEIN3HINTER. . . .  C ADDR   0492H   A                          242 269 347 376 724# 
+                                                                
+WAIT3S . . . . . .  C ADDR   04A6H   A                          151 196 477 746# 
+                                                                
+RI . . . . . . . .  B ADDR   0098H.0 A                          102# 
+INT0 . . . . . . .  B ADDR   00B0H.2 A                          91# 
+MARKE2Z. . . . . .  C ADDR   0569H   A                          888# 890 
+BEIN0START . . . .  C ADDR   03A1H   A                          546 554# 
+BEIN4HINTER. . . .  C ADDR   0496H   A                          243 270 327 398 505 
+                                                                728# 
+INT1 . . . . . . .  B ADDR   00B0H.3 A                          90# 
+CY . . . . . . . .  B ADDR   00D0H.7 A                          56# 
+DPH. . . . . . . .  D ADDR   0083H   A                          24# 
+BEIN1START . . . .  C ADDR   03ABH   A                          547 560# 
+BEIN5HINTER. . . .  C ADDR   049AH   A                          219 292 328 399 422 
+                                                                488 732# 
+TI . . . . . . . .  B ADDR   0098H.1 A                          101# 
+NEGATIV0 . . . . .  C ADDR   0586H   A                          907 912# 
+BEIN2START . . . .  C ADDR   03B5H   A                          548 566# 
+IE0. . . . . . . .  B ADDR   0088H.1 A                          70# 
+BEIN3START . . . .  C ADDR   03BFH   A                          549 573# 
+RECHTSDREHEN . . .  C ADDR   0181H   A                          172 307# 
+WARTENAUFPOS . . .  C ADDR   0414H   A                          163 183 209 216 225 
+                                                                232 239 248 254 263 
+                                                                272 279 286 295 302 
+                                                                313 320 330 336 342 
+                                                                351 363 370 380 386 
+                                                                392 401 408 413 417 
+                                                                421 425 429 443 456 
+                                                                464 469 476 480 485 
+                                                                491 496 501 507 512 
+                                                                525 538 619# 
+LEUCHTEROT . . . .  C ADDR   04B3H   A                          143 215 247 271 301 
+                                                                319 350 385 463 490 
+                                                                506 537 759# 
+IE1. . . . . . . .  B ADDR   0088H.3 A                          68# 
+
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1415    ----
+   XDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+REGISTER BANK(S) USED : 0 
+
+ASSEMBLY COMPLETE.   0 WARNING(S)   0 ERROR(S)

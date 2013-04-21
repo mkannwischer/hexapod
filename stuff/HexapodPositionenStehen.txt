@@ -1,0 +1,18 @@
+mov 20h, #110d    ;Startposition Servo0   t; StartPos: Bein 0,3,4 hinten oben, 1,2,5 vorne unten
+mov 21h, #110d    ;Startposition Servo1   t 
+mov 22h, #125d    ;Startposition Servo2  k
+mov 23h, #45d    ;Startposition Servo3   k
+mov 24h, #35d    ;Startposition Servo4   k
+mov 25h, #20d    ;Startposition Servo5   k
+mov 26h, #110d    ;Startposition Servo6   t
+mov 27h, #110d    ;Startposition Servo7   t
+mov 28h, #125d    ;Startposition Servo8  k
+mov 29h, #45d    ;Startposition Servo9   k
+mov 2Ah, #35d    ;Startposition Servo10  k
+mov 2Bh, #20d    ;Startposition Servo11  k
+mov 2Ch, #110d    ;Startposition Servo12  t
+mov 2Dh, #110d    ;Startposition Servo13  t
+mov 2Eh, #125d    ;Startposition Servo14 k
+mov 2Fh, #45d    ;Startposition Servo15  k
+mov 30h, #35d    ;Startposition Servo16  k
+mov 31h, #20d    ;Startposition Servo17  k

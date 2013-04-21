@@ -1,0 +1,595 @@
+org 0h 
+jmp init
+org 0Bh
+call interupt0  ;20msinterupt
+reti
+init:
+setb EA
+setb ET0
+mov TMOD, #1b ; Timer0im 16-Bit Modus
+mov TL0, #0B1h
+mov TH0, #0E0h
+setb TR0
+call startPositionLaden
+mov r7, #4d   ;register um bei jedem n. schleifenaufruf istPos und sollPos anzupasen
+posFlag BIT P4.0            ; ist posFlag=0 so ist istPos != sollPos ... ist posFlag=1 so ist istPos=sollPos
+clr posFlag
+hauptprog:
+jnb posFlag,hauptprog
+call Bein1Hinter
+call Bein2Hinter
+call Bein5Hinter
+call Bein0Vor
+call Bein3Vor
+call Bein4Vor
+mov r6, #0FFh
+waitloop0:
+jnb posFlag,waitloop0
+call Bein1Hoch
+call Bein2Hoch
+call Bein5Hoch
+call Bein0Runter
+call Bein3Runter
+call Bein4Runter
+mov r6, #0FFh
+waitloop1:
+jnb posFlag,waitloop1
+call Bein1Vor
+call Bein2Vor
+call Bein5Vor
+call Bein0Hinter
+call Bein3Hinter
+call Bein4Hinter
+mov r6, #0FFh
+waitloop2:
+jnb posFlag,waitloop2
+call Bein1Runter
+call Bein2Runter
+call Bein5Runter
+call Bein0Hoch
+call Bein3Hoch
+call Bein4Hoch
+mov r6, #0FFh
+waitloop3:
+jnb posFlag,waitloop3
+jmp hauptprog
+
+
+
+Bein0Vor:
+mov 40h, #60d
+ret
+Bein0Hinter:
+mov 40h, #60d
+ret
+Bein0Hoch:
+mov 41h, #60d
+mov 42h, #60d
+ret
+Bein0Runter:
+mov 41h, #60d
+mov 42h, #60d
+ret
+
+
+Bein1Vor:
+mov 43h, #60d
+ret
+Bein1Hinter:
+mov 43h, #60d
+ret
+Bein1Hoch:
+mov 44h, #60d
+mov 45h, #60d
+ret
+Bein1Runter:
+mov 44h, #60d
+mov 45h, #60d
+ret
+
+
+Bein2Vor:
+mov 46h, #60d
+ret
+Bein2Hinter:
+mov 46h, #60d
+ret
+Bein2Hoch:
+mov 47h, #60d
+mov 48h, #60d
+ret
+Bein2Runter:
+mov 47h, #60d
+mov 48h, #60d
+ret
+
+
+Bein3Vor:
+mov 49h, #60d
+ret
+Bein3Hinter:
+mov 49h, #60d
+ret
+Bein3Hoch:
+mov 4Ah, #60d
+mov 4Bh, #60d
+ret
+Bein3Runter:
+mov 4Ah, #60d
+mov 4Bh, #60d
+ret
+
+
+Bein4Vor:
+mov 4Ch, #60d
+ret
+Bein4Hinter:
+mov 4Ch, #60d
+ret
+Bein4Hoch:
+mov 4Dh, #60d
+mov 4Eh, #60d
+ret
+Bein4Runter:
+mov 4Dh, #60d
+mov 4Eh, #60d
+ret
+
+
+Bein5Vor:
+mov 4Fh, #60d
+ret
+Bein5Hinter:
+mov 4Fh, #60d
+ret
+Bein5Hoch:
+mov 50h, #60d
+mov 51h, #60d
+ret
+Bein5Runter:
+mov 50h, #60d
+mov 51h, #60d
+ret
+
+
+startPositionLaden:
+mov 40h, #125d    ;Startposition Servo0  ; StartPos: Bein 0,3,4 hinten oben, 1,2,5 vorne unten
+mov 41h, #125d    ;Startposition Servo1
+mov 42h, #125d    ;Startposition Servo2
+mov 43h, #125d    ;Startposition Servo3
+mov 44h, #125d    ;Startposition Servo4
+mov 45h, #125d    ;Startposition Servo5
+mov 46h, #125d    ;Startposition Servo6
+mov 47h, #125d    ;Startposition Servo7
+mov 48h, #125d    ;Startposition Servo8
+mov 49h, #125d    ;Startposition Servo9
+mov 4Ah, #125d    ;Startposition Servo10
+mov 4Bh, #125d    ;Startposition Servo11
+mov 4Ch, #125d    ;Startposition Servo12
+mov 4Dh, #125d    ;Startposition Servo13
+mov 4Eh, #125d    ;Startposition Servo14
+mov 4Fh, #125d    ;Startposition Servo15
+mov 50h, #125d    ;Startposition Servo16
+mov 51h, #125d    ;Startposition Servo17
+mov 20h, 40h
+mov 21h, 41h
+mov 22h, 42h
+mov 23h, 43h
+mov 24h, 44h
+mov 25h, 45h
+mov 26h, 46h
+mov 27h, 47h
+mov 28h, 48h
+mov 29h, 49h
+mov 2Ah, 4Ah
+mov 2Bh, 4Bh
+mov 2Ch, 4Ch
+mov 2Dh, 4Dh
+mov 2Eh, 4Eh
+mov 2Fh, 4Fh
+mov 30h, 50h
+mov 31h, 51h
+ret
+
+pause800mikroSekunden:
+mov r1, #2d
+p900aussen:
+mov r2, #200d
+p800innen:
+djnz r2, p800innen           ;2MZ x 200 x 2 = 800 mikroSek
+djnz r1, p800aussen
+ret
+
+
+
+
+
+
+
+interupt0:
+mov r0, #125d ;register zum runterzählen
+mov P1, #255d ;Servo0-Servo5 pin an       
+call pause800mikroSekunden 
+loop0:
+cjne r0, 20h, weiter0    
+clr P1.2                 
+weiter0:
+cjne r0, 21h, weiter1
+clr P1.3
+weiter1:
+cjne r0, 22h, weiter2
+clr P1.4
+weiter2:
+cjne r0, 23h, weiter3
+clr P1.5
+weiter3:
+cjne r0, 24h, weiter4
+clr P1.6
+weiter4:
+cjne r0, 25h, weiter5
+clr P1.7
+weiter5:
+djnz r0, loop0    ;Ein Schleifendurchlauf benötigt etwa 14 MZ; bei einer zeit von 2,5ms werden also etwa 121 durchläufe benötigt
+mov r0, #125d
+mov P2, #255d  ;Servo6-Servo11 an
+call pause800mikroSekunden
+loop1:
+cjne r0, 26h, weiter6
+clr P2.2
+weiter6:
+cjne r0, 27h, weiter7
+clr P2.3
+weiter7:
+cjne r0, 28h, weiter8
+clr P2.4
+weiter8:
+cjne r0, 29h, weiter9
+clr P2.5
+weiter9:
+cjne r0, 2Ah, weiter10
+clr P2.6
+weiter10:
+cjne r0, 2Bh, weiter11
+clr P2.7
+weiter11:
+djnz r0, loop1
+mov r0, #125d
+mov P3, #255d
+call pause800mikrosekunden
+loop2:
+cjne r0, 2Ch, weiter12
+clr P3.2
+weiter12:
+cjne r0, 2Dh, weiter13
+clr P3.3
+weiter13:
+cjne r0, 2Eh, weiter14
+clr P3.4
+weiter14:
+cjne r0, 2Fh, weiter15
+clr P3.5
+weiter15:
+cjne r0, 30h, weiter16
+clr P3.6
+weiter16:
+cjne r0, 31h, weiter17
+clr P3.7
+weiter17:                 
+djnz r0, loop2 
+djnz r7, nicht
+mov r7, #4d          ; ACHTUNG! 
+call istPosAkt
+nicht:
+ret
+
+istPosAkt:
+
+cjnz r7,next17
+setb posFlag
+
+clr c
+mov a, 20h
+cjne a, 40h, nichtGleich0   ;Servo0 istPos an sollPos anpassen
+jmp next0
+nichtGleich0:
+clr posFlag
+subb a, 40h
+jc negativ0
+inc a
+mov 20h, a
+jmp next0
+negativ0:
+dec a
+mov 20h, a
+next0:
+
+
+clr c
+mov a, 21h
+cjne a, 41h, nichtGleich1   ;Servo1 istPos an sollPos anpassen
+jmp next1
+nichtGleich:
+clr posFlag
+subb a, 41h
+jc negativ1
+inc a
+mov 21h, a
+jmp next1
+negativ1:
+dec a
+mov 21h, a
+next1:
+
+
+clr c
+mov a, 22h
+cjne a, 42h, nichtGleich2   ;Servo2 istPos an sollPos anpassen
+jmp next2
+nichtGleich2:
+clr posFlag
+subb a, 42h
+jc negativ2
+inc a
+mov 22h, a
+jmp next2
+negativ2:
+dec a
+mov 22h, a
+next2:
+
+
+clr c
+mov a, 23h
+cjne a, 43h, nichtGleich3   ;Servo3 istPos an sollPos anpassen
+jmp next3
+nichtGleich3:
+clr posFlag
+subb a, 43h
+jc negativ3
+inc a
+mov 23h, a
+jmp next3
+negativ3:
+dec a
+mov 23h, a
+next3:
+
+
+clr c
+mov a, 24h
+cjne a, 44h, nichtGleich4   ;Servo4 istPos an sollPos anpassen
+jmp next4
+nichtGleich4:
+clr posFlag
+subb a, 40h
+jc negativ4
+inc a
+mov 24h, a
+jmp next4
+negativ4:
+dec a
+mov 24h, a
+next4:
+
+
+clr c
+mov a, 25h
+cjne a, 45h, nichtGleich5   ;Servo5 istPos an sollPos anpassen
+jmp next5
+nichtGleich5:
+clr posFlag
+subb a, 45h
+jc negativ5
+inc a
+mov 25h, a
+jmp next5
+negativ5:
+dec a
+mov 25h, a
+next5:
+
+
+clr c
+mov a, 26h
+cjne a, 46h, nichtGleich6   ;Servo6 istPos an sollPos anpassen
+jmp next6
+nichtGleich6:
+clr posFlag
+subb a, 46h
+jc negativ6
+inc a
+mov 26h, a
+jmp next6
+negativ6:
+dec a
+mov 26h, a
+next6:
+
+
+clr c
+mov a, 27h
+cjne a, 47h, nichtGleich7   ;Servo7 istPos an sollPos anpassen
+jmp next7
+nichtGleich7:
+clr posFlag
+subb a, 47h
+jc negativ7
+inc a
+mov 27h, a
+jmp next7
+negativ7:
+dec a
+mov 27h, a
+next7:
+
+
+clr c
+mov a, 28h
+cjne a, 48h, nichtGleich8   ;Servo8 istPos an sollPos anpassen
+jmp next8
+nichtGleich8:
+clr posFlag
+subb a, 48h
+jc negativ8
+inc a
+mov 28h, a
+jmp next8
+negativ8:
+dec a
+mov 28h, a
+next8:
+
+
+clr c
+mov a, 29h
+cjne a, 49h, nichtGleich9   ;Servo9 istPos an sollPos anpassen
+jmp next9
+nichtGleich9:
+clr posFlag
+subb a, 49h
+jc negativ9
+inc a
+mov 29h, a
+jmp next9
+negativ9:
+dec a
+mov 29h, a
+next9:
+
+
+clr c
+mov a, 2Ah
+cjne a, 4Ah, nichtGleichA   ;Servo10 istPos an sollPos anpassen
+jmp next10
+nichtGleich10:
+clr posFlag
+subb a, 4Ah
+jc negativ10
+inc a
+mov 2Ah, a
+jmp next10
+negativ10:
+dec a
+mov 2Ah, a
+next10:
+
+
+clr c
+mov a, 2Bh
+cjne a, 4Bh, nichtGleich11   ;Servo11 istPos an sollPos anpassen
+jmp next11
+nichtGleich11:
+clr posFlag
+subb a, 4Bh
+jc negativ11
+inc a
+mov 2Bh, a
+jmp next11
+negativ11:
+dec a
+mov 2Bh, a
+next11:
+
+
+
+clr c
+mov a, 2Ch
+cjne a, 4Ch, nichtGleich12   ;Servo12 istPos an sollPos anpassen
+jmp next12
+nichtGleich12:
+clr posFlag
+subb a, 4Ch
+jc negativ12
+inc a
+mov 2Ch, a
+jmp next12
+negativ12:
+dec a
+mov 2Ch, a
+next12:
+
+
+clr c
+mov a, 2Dh
+cjne a, 4Dh, nichtGleich13   ;Servo13 istPos an sollPos anpassen
+jmp next13
+nichtGleich13:
+clr posFlag
+subb a, 4Dh
+jc negativ13
+inc a
+mov 2Dh, a
+jmp next13
+negativ13:
+dec a
+mov 2Dh, a
+next13:
+
+
+clr c
+mov a, 2Eh
+cjne a, 4Eh, nichtGleich14   ;Servo14 istPos an sollPos anpassen
+jmp next14
+nichtGleich14:
+clr posFlag
+subb a, 4Eh
+jc negativ14
+inc a
+mov 2Eh, a
+jmp next14
+negativ14:
+dec a
+mov 2Eh, a
+next14:
+
+
+clr c
+mov a, 2Fh
+cjne a, 4Fh, nichtGleich15   ;Servo15 istPos an sollPos anpassen
+jmp next15
+nichtGleich15:
+clr posFlag
+subb a, 4Fh
+jc negativ15
+inc a
+mov 2Fh, a
+jmp next15
+negativ15:
+dec a
+mov 2Fh, a
+next15:
+
+
+clr c
+mov a, 30h
+cjne a, 50h, nichtGleich16   ;Servo16 istPos an sollPos anpassen
+jmp next16
+nichtGleich16:
+clr posFlag
+subb a, 50h
+jc negativ16
+inc a
+mov 30h, a
+jmp next16
+negativ16:
+dec a
+mov 30h, a
+next16:
+
+
+clr c
+mov a, 31h
+cjne a, 51h, nichtGleich17   ;Servo17 istPos an sollPos anpassen
+jmp next17
+nichtGleich17:
+clr posFlag
+subb a, 51h
+jc negativ17
+inc a
+mov 31h, a
+jmp next17
+negativ17:
+dec a
+mov 31h, a
+next17:
+ret

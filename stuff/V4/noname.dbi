@@ -1,0 +1,28 @@
+[Breakpoint]
+number=1
+type0=0
+line0=654
+file0=d:\hexapod\v4\hexapodv3.a51
+address0=-1
+length0=1
+space0=0
+iscdt0=0
+cdt0=
+iscomp0=0
+comp0=0
+action0=0
+haseval0=0
+evalexp0=
+enable0=1
+[Debug]
+LastVirtual=AT89C51RC2
+Explore=1
+Information=0
+InfoSP=1
+InfoExpr=
+[51 Driver options]
+Link_UseMonitor=0
+Link_WriteableCode=1
+Link_OldMonitor=0
+Link_Baudrate=115
+Link_BreakSeq=Ext UART
